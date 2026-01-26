@@ -1,0 +1,158 @@
+module Satx
+  class DCSolver
+    def initialize problem
+      @problem = problem
+      make
+    end
+
+    def sizes
+      @a.map(&:size)
+    end
+
+    BUILDER = [nil, nil,
+               Clause2LiteralSet,
+               Clause3LiteralSet]
+    def make
+      @a = [SearchState.new,
+            SearchState.new,
+            SearchState.new,
+            SearchState.new]
+
+      @cutoff = @problem.variables / 2
+      @problem.clauses.each do |clause|
+        cls = BUILDER[clause.size].new *clause
+        grp = clause.inject(0) do |count, literal|
+          literal.abs <= @cutoff ? count + 1 : count
+        end
+        @a[grp].add cls
+      end
+      @a.each do |ax|
+        unless ax.simplify
+          @unsatisfiable = true
+          raise "bad"
+          return
+        end
+      end
+    end
+
+    def enumerate_a3 idx, equivalences, indent=""
+      begin
+        current = @a3_stack[idx] || @a3_clauses.next
+        unless @a3_stack[idx]
+          @a3_stack[idx] = current
+        end
+      rescue StopIteration
+        # puts "#{indent}BASE CASE *******************"
+        # puts equivalences
+        # raise "cain"
+        @a3_solutions << equivalences
+        return verify_a210_extended equivalences
+      end
+      #puts "#{indent}#{idx}: current #{current}"
+      reduced = current.reduce equivalences
+      case reduced
+      when false
+        return false
+      when true
+        return enumerate_a3 idx + 1, equivalences, "#{indent}  "
+      when Equivalences
+        ec = equivalences.dup
+        return enumerate_a3 idx + 1, equivalences, "#{indent}  " if ec.merge! reduced
+      when ClauseLiteralSet
+        current.each_variable_assignment do |assignment|
+          # puts "#{indent}#{idx}: assignment #{assignment}"
+          ec = equivalences.dup
+          ok = true
+          assignment.each do |a, b|
+            break unless ok &&= ec.assign(a, b)
+          end
+          next if !ok
+          #puts "#{indent}#{idx}: ec #{ec}"
+          rv = enumerate_a3 idx + 1, ec, "#{indent}  "
+          return rv if rv
+        end
+        return false
+      else
+        raise "wtf? #{reduced.inspect}"
+      end
+    end
+
+    def reduce_ax idx, ss
+      rv = ss.merge! @a[idx]
+      return false if rv == false
+      rv = ss.simplify
+      return false if rv == false
+      return true if rv == true
+      ss
+    end
+
+    def verify_a210_extended equivalences, var=1
+      while var <= @problem.variables && equivalences[var].nil?
+        var += 1
+      end
+      if @problem.variables < var
+        return verify_a210 equivalences
+      end
+      equivalences[var] = true
+      equivalences[-var] = false
+      rv = verify_a210_extended equivalences, var + 1
+      unless rv
+        equivalences[var] = false
+        equivalences[-var] = true
+        rv = verify_a210_extended equivalences, var + 1
+      end
+      equivalences.delete var
+      equivalences.delete -var
+      return rv
+    end
+
+    def verify_a210 equivalences
+      ss = SearchState.new equivalences: equivalences
+      2.downto(0).each do |x|
+        #puts "reduce_a#{x}"
+        ss.simplify
+        rv = reduce_ax x, ss
+        #puts "finished reduce_a#{x}"
+        #puts ss
+        #puts rv
+        #return false if rv == false
+        if rv == false
+          #puts ss
+          #puts rv
+          #puts "failed, on to next"
+          #puts "press enter to continue"
+          #STDIN.gets
+          return false
+        end
+
+      end
+      v = @problem.verify ss.equivalences
+      if v
+        puts "VERIFIED"
+      else
+        puts "FAILURE - NOT VERIFIED"
+        puts @problem.failed.inspect
+        puts ss
+        return :failed
+      end
+      #puts "press enter to continue"
+      #STDIN.gets
+      return true
+    end
+
+    def solve
+      @a3_clauses = @a[3].each_clause
+      @a3_stack = []
+      @a3_solutions = []
+      puts "*"*30, "START ENUMERATE ", "*"*30
+      rv = enumerate_a3 0, Equivalences.new
+      puts "enumerate returns: #{rv}"
+      puts "*"*30, "END ENUMERATE ", "*"*30
+      puts "a3 solutions found = #{@a3_solutions.size}"
+      puts "cutoff = #{@cutoff}"
+      puts "possible = #{2**@cutoff}"
+      puts "overall = #{2**(2*@cutoff)}"
+      rv
+    end
+  end
+end

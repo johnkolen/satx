@@ -1,0 +1,2 @@
+module Satx
+end
