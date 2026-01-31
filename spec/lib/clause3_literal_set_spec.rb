@@ -113,6 +113,8 @@ module Satx
         cx.union!(cppn, cpnp, cpnn, cnnn)
         expect(cx.simplify).to eq [cxnn, assign(1=>true)]
       end
+      it 'case 1' do
+      end
     end
 
     context 'reduce' do

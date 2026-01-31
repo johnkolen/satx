@@ -60,6 +60,15 @@ module Satx
       end
     end
 
+    context 'landscape' do
+      it 'single k=2' do
+        ss = SearchState.new clauses: [[1, 2, 3]]
+        lx = ss.landscape
+        puts lx
+      end
+    end
+
+
     context 'simplify' do
       Satx.constants.select{|x| /SSv\d+c\d+k\d+/ =~ x.to_s}.sort.each do |test|
         it test do
@@ -72,6 +81,28 @@ module Satx
           result = ss.simplify
           puts result
           puts ss
+          expect(ss.to_a).to eq [[9, 13], [1, 8, -11]]
+        end
+        it 'case 2' do
+          ss = SearchState.new clauses: [[-1, 4, -5], [-4, 6], [-1, -4], [4, -7]],
+                               equivalences: assign(1=>false, 2=>false, 3=>false, 4=>false,
+                                                    5=>true, 6=>true, 7=>false, 8=>true)
+          puts ss
+          result = ss.simplify
+          puts result
+          puts ss
+          expect(result).to eq true
+          expect(ss).to be_empty
+        end
+        it 'case 2' do
+          ss = SearchState.new clauses: [[1, -3, 8], [1, -3, -8], [-1, -3, 8], [-1, -4, -7],
+                                         [-1, -4, 8], [-1, -3, 7], [-1, -3, -7], [-3, -4, -5],
+                                         [-1, 4, -5], [-2, 4, -7], [-1, -3, -5], [2, -4, -8],
+                                         [3, -4, 6], [-2, 3, -8]]
+          rv = ss.simplify
+          puts rv
+          puts ss
+          expect(rv).to eq false
         end
       end
     end
@@ -118,6 +149,17 @@ module Satx
           equivalences: {7=>4, -7=>-4, 8=>true, -8=>false})
         ss12 = ss1.intersection ss2
         expect(ss12.equivalences).to eq assign(7 => 4)
+      end
+    end
+
+    context 'merge' do
+      it 'case 1' do
+        ss1 = SearchState.new equivalences: assign(1=>false, 2=>false, 3=>false, 4=>false)
+        ss2 = SearchState.new clauses: [[-1, 4, -5], [-4, 6], [-1, -4], [4, -7]],
+                              equivalences: assign(3=>false, 8=>false, 2=>true)
+        rv = ss1.merge! ss2
+        puts rv
+        expect(rv).to be_truthy
       end
     end
   end

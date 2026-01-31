@@ -221,7 +221,17 @@ module Satx
       end
     end
 
+    def pp x
+      case x
+      when Array
+        "[#{x.map(&:to_s).join(", ")}]"
+      else
+        x.to_s
+      end
+    end
+
     def simplify indent=""
+      noisy { to_s(indent) }
       remove = []
       addlater = []
       # cnt = 0
@@ -234,7 +244,7 @@ module Satx
         each_clause do |clause|
           if 1 < clause.size
             result = clause.simplify
-            noisy { "#{indent}#{clause} simplify 1 ==> #{result}" }
+            noisy { "#{indent}#{clause} simplify 1 ==> #{pp result}" }
             next if _simplify_process_next? result, clause, remove, addlater
           end
           result = clause.reduce @equivalences
@@ -266,13 +276,13 @@ module Satx
             end
           end
         end
-        noisy { "#{indent}remove: #{remove}" }
+        noisy { "#{indent}remove: #{pp remove}" }
         if remove.empty? && addlater.empty?
           break if @equivalences.size == equiv_size
         else
           subtract! remove
         end
-        noisy { "#{indent}addlater: #{addlater}" }
+        noisy { "#{indent}addlater: #{pp addlater}" }
         addlater.each{|cls| add cls}
         noisy { "#{indent}#{self}" }
       end
@@ -302,8 +312,18 @@ module Satx
       ].compact.join("\n#{indent}")
     end
 
+    def to_a
+      @clauses[2].to_a.concat @clauses[3].to_a
+    end
+
+    def to_cls_a
+      @clauses[2].to_cls_a.concat @clauses[3].to_cls_a
+    end
+
     def merge! other
       merge_clauses! other
+      puts equivalences.to_assign
+      puts other.equivalences.to_assign
       result = equivalences.merge! other.equivalences
       if result
         self
@@ -340,6 +360,46 @@ module Satx
         end
       end
       @failed.empty?
+    end
+
+    def landscape_rec assign, var, lx
+      #puts assign
+      #puts assign.size
+      var += 1 while assign.assigned?(var) && var <= @variables
+      if @variables < var
+        lx[assign.dup] = verify assign
+        return
+      end
+      v = assign.size / 2 + 1
+      assign.assign v, true
+      landscape_rec assign, var + 1, lx
+      assign.delete v
+      assign.delete -v
+      assign.assign v, false
+      rv = landscape_rec assign, var + 1, lx
+      assign.delete v
+      assign.delete -v
+    end
+
+    def landscape
+      lx = {}
+      max_equiv_var = @equivalences.empty? ? 0 : equivalences.keys.max
+      @variables = [max_equiv_var,
+                    to_cls_a.map(&:max_variable).max].max
+      landscape_rec @equivalences.dup, 1, lx
+      lx
+    end
+
+    def landscape_diff lx_other
+      lx = landscape
+      rv = :same
+      lx.each do |vars, value|
+        if lx_other[vars] != value
+          puts "#{vars.to_assign} self: #{value}  other: #{lx_other[var]}"
+          rv = :diff
+        end
+      end
+      rv
     end
   end
 end

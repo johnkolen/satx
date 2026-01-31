@@ -9,6 +9,10 @@ module Satx
       @a.map(&:size)
     end
 
+    def unsatisfiable?
+      @unsatisfiable || false
+    end
+
     BUILDER = [nil, nil,
                Clause2LiteralSet,
                Clause3LiteralSet]
@@ -26,13 +30,18 @@ module Satx
         end
         @a[grp].add cls
       end
-      @a.each do |ax|
+      @a.each_with_index do |ax, idx|
+        puts "==== #{idx} ===="
+        puts ax
+        puts "---"
         unless ax.simplify
           @unsatisfiable = true
-          raise "bad"
-          return
+          return false
         end
+        puts ax
+        puts "==="
       end
+      true
     end
 
     def enumerate_a3 idx, equivalences, indent=""
@@ -78,36 +87,51 @@ module Satx
     end
 
     def reduce_ax idx, ss
+      puts "==="
+      puts ss
+      puts '---'
       rv = ss.merge! @a[idx]
+      puts @a[idx]
+      puts "after merge: #{rv}"
+      puts ss
+      puts "==="
       return false if rv == false
       rv = ss.simplify
+      puts "after simplify: #{rv}"
+      puts ss
       return false if rv == false
       return true if rv == true
       ss
     end
 
     def verify_a210_extended equivalences, var=1
-      while var <= @problem.variables && equivalences[var].nil?
+      # puts "#{var} #{equivalences.to_assign}"
+      while var <= @problem.variables && equivalences.assigned?(var)
+        puts "#{var} #{equivalences.assigned?(var)} #{@problem.variables.inspect}"
         var += 1
       end
+      #puts "#{var} #{equivalences.assigned?(var)}"
       if @problem.variables < var
+        # puts "#{equivalences.to_assign}"
         return verify_a210 equivalences
       end
-      equivalences[var] = true
-      equivalences[-var] = false
+      raise "cain #{equivalences[var]}" unless equivalences[var].nil?
+      equivalences.assign var, true
       rv = verify_a210_extended equivalences, var + 1
-      unless rv
-        equivalences[var] = false
-        equivalences[-var] = true
-        rv = verify_a210_extended equivalences, var + 1
-      end
       equivalences.delete var
       equivalences.delete -var
+      unless rv
+        equivalences.assign var, false
+        rv = verify_a210_extended equivalences, var + 1
+        equivalences.delete var
+        equivalences.delete -var
+      end
       return rv
     end
 
     def verify_a210 equivalences
       ss = SearchState.new equivalences: equivalences
+      puts "#{equivalences.to_assign}"
       2.downto(0).each do |x|
         #puts "reduce_a#{x}"
         ss.simplify
@@ -117,9 +141,10 @@ module Satx
         #puts rv
         #return false if rv == false
         if rv == false
-          #puts ss
-          #puts rv
-          #puts "failed, on to next"
+          #puts before
+          puts ss
+          puts rv
+          puts "failed #{x}, on to next"
           #puts "press enter to continue"
           #STDIN.gets
           return false
@@ -141,11 +166,13 @@ module Satx
     end
 
     def solve
+      return false if unsatisfiable?
       @a3_clauses = @a[3].each_clause
       @a3_stack = []
       @a3_solutions = []
       puts "*"*30, "START ENUMERATE ", "*"*30
       rv = enumerate_a3 0, Equivalences.new
+      @unsatisfiable = true unless rv
       puts "enumerate returns: #{rv}"
       puts "*"*30, "END ENUMERATE ", "*"*30
       puts "a3 solutions found = #{@a3_solutions.size}"

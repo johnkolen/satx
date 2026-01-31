@@ -4,6 +4,8 @@ module Satx
 
     attr_accessor :unsatisfiable
 
+    alias_method :get_value, :"[]"
+
     def [] idx
       return nil if super(idx).nil?
       while super(idx).is_a? Integer
@@ -11,6 +13,10 @@ module Satx
       end
       v = super(idx)
       v.nil? ? idx : v
+    end
+
+    def assigned? idx
+      !get_value(idx).nil?
     end
 
     def self.assign **assignments

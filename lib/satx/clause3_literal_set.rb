@@ -150,6 +150,10 @@ module Satx
       yield var3
     end
 
+    def max_variable
+      [var1, var2, var3].max
+    end
+
     def each &block
       s = (@r >> SET_SHIFT) & SET_MASK
       i = 0
@@ -772,7 +776,7 @@ module Satx
     VAR_EQ_23  = 0b10011001
     VAR_NEQ_23 = 0b01100110
 
-    def _reduce_bools ec_var1, ec_var2, ec_var3
+    def _reduce_bools ec_var1, ec_var2, ec_var3, indent=""
       sv = set_vector
       noisy { "#{indent}sv 0: %8s" % sv.to_s(2) }
       # puts "sv = #{sv.to_s(2)}"
@@ -1103,7 +1107,7 @@ module Satx
       end
     end
 
-    def reduce equivalences
+    def reduce equivalences, indent=""
       return false if set_vector == 0b1111
       s = simplify
       case s

@@ -97,7 +97,24 @@ module Satx
                       [-1, 2, 3], [-1, 2, -3], [-1, -2, 3]]
         expect(c.simplify!).to eq assign(1=>true, 2=>true, 3=>true)
       end
+      it 'case 1' do
+        cs = ClauseSet[[-1, 4, -5], [-4, 6], [-1, -4], [4, -7]]
+        rv = cs.reduce!(assign(1=>false, 2=>false, 3=>false, 4=>false,
+                              5=>true, 6=>true, 7=>false, 8=>true))
+        puts rv.inspect
+        puts cs
+      end
+      it 'case 2' do
+        cs = ClauseSet[[1, -3, 8], [1, -3, -8], [-1, -3, 8], [-1, -4, -7], [-1, -4, 8],
+                       [-1, -3, 7], [-1, -3, -7], [-3, -4, -5], [-1, 4, -5], [-2, 4, -7],
+                       [-1, -3, -5], [2, -4, -8], [3, -4, 6], [-2, 3, -8]]
+        rv = cs.simplify!
+        puts rv
+        puts cs
+        expect(rv).to eq false
+      end
     end
+
     context 'to clause arrays' do
       it 'empty' do
         c = ClauseSet[]
@@ -108,6 +125,7 @@ module Satx
         expect(c.to_a).to eq [[1, 2], [1, -2], [-1, 2], [-1, -2]]
       end
     end
+
     context 'intersection' do
       it 'case 1' do
         cs1 = ClauseSet[[-5, -8], [2, -7]]

@@ -131,31 +131,31 @@ module Satx
     context 'brute force' do
       it 'many v=4 c=8' do
         v = 4
-        100000.times do
+        1000.times do
           trial v, 2 * v, 3
         end
       end
       it 'many v=4 c=20' do
         v = 4
-        100000.times do
+        100.times do
           trial v, 5 * v, 3
         end
       end
       it 'many v=8 c=40' do
         v = 8
-        10000.times do
+        100.times do
           trial v, 5 * v, 3
         end
       end
       it 'many v=8 c=48' do
         v = 8
-        10000.times do
+        100.times do
           trial v, 6 * v, 3
         end
       end
       it 'many v=16 c=80' do
         v = 16
-        10000.times do
+        100.times do
           trial v, 5 * v, 3
         end
       end

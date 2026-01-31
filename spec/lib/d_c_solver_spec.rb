@@ -43,13 +43,16 @@ module Satx
       #puts "binary: #{s[1] / 2} of #{vars / 2}"
       result = dcs.solve
       puts "trial: #{result}"
+      puts "bf #{bf}"
       if result == :failed
         puts "^^^^^^^^^^^^^^ #{bf ? "" : "UN"}SAT ^^^^^^^^^^^^"
         puts p.clauses.inspect
       elsif result == false
         if bf
-          puts "^^^^^^^^^^^^^^ UNSAT ^^^^^^^^^^^^"
-          puts p.clauses.inspect
+          puts "^^^^^^^^^^^^^^ #{bf ? "" : "UN"}SAT ^^^^^^^^^^^^"
+          puts "pnew #{p.clauses.inspect.gsub('[[','[').gsub(']]',']')},"
+          puts "known: #{bf ? "" : "un"}sat,"
+          puts "solution: #{Equivalences[**bf].to_assign}"
         end
         expect(bf).to eq false
       else
@@ -60,15 +63,28 @@ module Satx
       v = 8
       trial v, 2 * v, 3, Random.new(1001)
     end
-    it 'many problems' do
+    it 'many poroblems' do
       v = 8
       1000.times do
         trial v, 5 * v, 3
       end
     end
 
-    it 'Pv8c40k3unsat001' do
-      search Pv8c40k3unsat001
+    context 'verify_a210' do
+      it 'case 1 ' do
+        dc = DCSolver.new Pv8c40k3sat002
+        rv = dc.verify_a210 assign(1=>false, 2=>false, 3=>false, 4=>false)
+        puts rv
+        expect(rv).to be_truthy
+      end
+    end
+
+    context "problem examples" do
+      Satx.constants.select{|x| /Pv\d+c\d+k\d.*sat\d+/ =~ x.to_s}.sort.each do |pname|
+        it pname do
+          search Satx.const_get pname
+        end
+      end
     end
   end
 end
